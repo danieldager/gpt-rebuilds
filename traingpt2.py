@@ -110,7 +110,7 @@ class GPT(nn.Module):
         logits = self.lm_head(x) # (B, T, vocab_size)
         return logits
     
-        @classmethod
+    @classmethod
     def from_pretrained(cls, model_type):
         """Loads pretrained GPT-2 model weights from huggingface"""
         assert model_type in {'gpt2', 'gpt2-medium', 'gpt2-large', 'gpt2-xl'}
@@ -160,3 +160,40 @@ class GPT(nn.Module):
         return model
 
 # -----------------------------------------------------------------------------
+
+num_return_sequences = 5
+max_length = 30
+
+model = GPT.from_pretrained('gpt2')
+model.eval()
+
+import tiktoken
+enc = tiktoken.get_encoding('gpt2')
+tokens = enc.encode("This is a test of the emergency broadcast system")
+tokens = torch.tensor(tokens, dtype=torch.long)
+tokens = tokens.unsqueeze(0).repeat(num_return_sequences, 1)
+x = tokens
+
+torch.manual_seed(42)
+while x.size(1) < max_length:
+    with torch.no_grad():
+        # forward the model to get the logits
+        logits = model(x) # (B, T, vocab_size)
+        # take the logits at the last position
+        logits = logits[:, -1, :] # (B, vocab_size)
+        # get the probabilities
+        probs = F.softmax(logits, dim=-1)
+        # do top-k sampling
+        topk_probs, topk_indices = torch.topk(probs, 50, dim=-1)
+        # sample from the top-k probabilities
+        ix = torch.multinomial(topk_probs, 1)
+        # gather the corresponding indices
+        xcol = torch.gather(topk_indices, -1, ix)
+        # append to the sequence
+        x = torch.cat((x, xcol), dim=1)
+
+# print the generated text
+for i in range(num_return_sequences):
+    tokens = x[i, :max_length].tolist()
+    decoded = enc.decode(tokens)
+    print(">", decoded)
