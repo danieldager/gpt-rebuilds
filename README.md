@@ -1,1 +1,1 @@
-
+This repository contains my recreations of different versions of GPT as refactored by Andrej Karpathy in a series of tutorials he released on YouTube, as part of my efforts to improve my grasp of the Transformer architecture, attention mechanism, and PyTorch matrix manipulations more generally. Code written by myself as a further exploration of these topics will be indicated as such. Everything else is either a direct re-write or a paraphrase of Andrej's code.
