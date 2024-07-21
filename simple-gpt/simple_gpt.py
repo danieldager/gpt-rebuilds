@@ -61,3 +61,36 @@ def estimate_loss():
         out[split] = losses.mean()
     model.train()
     return out
+
+
+class Head(nn.Module):
+    """ one head of self-attention """
+    
+    def __init__(self, head_size):
+        super().__init__()
+        self.key = nn.Linear(n_embd, head_size, bias=False)
+        self.query = nn.Linear(n_embd, head_size, bias=False)
+        self.value = nn.Linear(n_embd, head_size, bias=False)
+
+        # buffers provide some additional functionality over direct assignments
+        self.register_buffer('tril', torch.tril(torch.ones(block_size, block_size)))
+
+    def forward(self, x):
+        # decompose x.shape
+        B, T, C = x.shape
+
+        k = self.key(x)
+        q = self.query(x)
+        v = self.value(x)
+
+        # compute attention weights matrix (affinities)
+        # scale by 1 / sqrt(C), remember C = head_size (embedding dim)
+        wei = q @ k.transpose(-2, -1) * C**(-0.5)
+        tril = self.tril[:T, :T] # truncate to size of x
+        wei = wei.masked_fill(tril == 0, float('-inf'))
+        wei = F.softmax(wei, dim=-1)
+
+        out = wei @ v
+        return out
+
+
